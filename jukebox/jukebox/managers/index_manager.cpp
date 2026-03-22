@@ -251,13 +251,11 @@ Future<> IndexManager::onIndexFetched(const std::string& url, matjson::Value&& j
     const std::filesystem::path filepath = this->baseIndexesPath() / fmt::format("{0:x}.json", hashValue);
 
     log::info("Fetched index: {}", url);
-
-    if (std::ofstream out(filepath); out.is_open()) {
-        const std::string str = json.dump(matjson::NO_INDENTATION);
-        out.write(str.data(), str.length());
-        log::info("Cached index: {}", url);
+    auto success = geode::utils::file::writeString(filepath, json.dump(matjson::NO_INDENTATION));
+    if (success.isErr()) {
+        log::error("Failed to cache index: {}", std::move(success).unwrapErr());
     } else {
-        log::error("Failed to cache index: {}", url);
+        log::info("Cached index: {}", url);
     }
 
     this->loadIndex(std::move(json)).inspectErr([url](const std::string& err) {
@@ -482,7 +480,7 @@ void IndexManager::onDownloadFinish(std::variant<IndexSongMetadata*, Song*>&& so
 }
 
 void IndexManager::registerIndexNongs(Nongs* destination) {
-    if (m_nongsForId.contains(!destination->songID())) {
+    if (m_nongsForId.contains(destination->songID())) {
         return;
     }
 
