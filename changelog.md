@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.6.1
+
+ * Try to print more useful information on internal cURL errors
+ * Optimize index caching a little
+
 ## v3.6.0
 
  * Add support for most song formats (except .opus, which sadly isn't usable by GD)
