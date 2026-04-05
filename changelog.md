@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.6.2
+
+ * Fix index songs not loading on newly initialized song IDs
+
 ## v3.6.1
 
  * Try to print more useful information on internal cURL errors
