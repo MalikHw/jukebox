@@ -1,7 +1,7 @@
-<img src="https://api.geode-sdk.org/v1/mods/fleym.nong/status_badge?stat=version" alt="mod version badge">
-<img src="https://api.geode-sdk.org/v1/mods/fleym.nong/status_badge?stat=downloads" alt="download count badge">
-<img src="https://api.geode-sdk.org/v1/mods/fleym.nong/status_badge?stat=gd_version" alt="geometry dash version badge">
-<img src="https://api.geode-sdk.org/v1/mods/fleym.nong/status_badge?stat=geode_version" alt="geode version badge">
+<img src="https://api.geode-sdk.org/v1/mods/fleym.nongd/status_badge?stat=version" alt="mod version badge">
+<img src="https://api.geode-sdk.org/v1/mods/fleym.nongd/status_badge?stat=downloads" alt="download count badge">
+<img src="https://api.geode-sdk.org/v1/mods/fleym.nongd/status_badge?stat=gd_version" alt="geometry dash version badge">
+<img src="https://api.geode-sdk.org/v1/mods/fleym.nongd/status_badge?stat=geode_version" alt="geode version badge">
 
 # Jukebox
 
