@@ -1,5 +1,6 @@
 #include <jukebox/ui/list/nong_list.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -17,6 +18,7 @@
 #include <Geode/ui/Layout.hpp>
 #include <Geode/ui/ScrollLayer.hpp>
 #include <Geode/ui/SimpleAxisLayout.hpp>
+#include <Geode/ui/TextInput.hpp>
 #include <Geode/utils/cocos.hpp>
 
 #include <jukebox/events/nong_deleted.hpp>
@@ -77,7 +79,20 @@ bool NongList::init(std::vector<int> songIds, const CCSize& size, const std::opt
     menu->setID("back-menu");
     this->addChildAtPosition(menu, Anchor::Left, CCPoint{-10.0f, 0.0f});
 
-    m_list = ScrollLayer::create({size.width, size.height - s_padding});
+    // Search bar — shown only in single-song view, hidden in multi-song view.
+    // It sits above the scroll list and shrinks the list height to fit.
+    m_searchInput = TextInput::create(size.width - s_padding * 2, "Search nongs...");
+    m_searchInput->setID("search-input");
+    m_searchInput->setScale(0.75f);
+    m_searchInput->setCallback([this](const std::string& query) {
+        m_searchQuery = query;
+        this->build();
+    });
+    m_searchInput->setVisible(false);
+    this->addChildAtPosition(m_searchInput, Anchor::Top, CCPoint{0.0f, -(s_searchBarHeight / 2 + s_padding / 2)});
+
+    // List height shrinks by s_searchBarHeight when the search bar is visible
+    m_list = ScrollLayer::create({size.width, size.height - s_padding - s_searchBarHeight});
     m_list->m_contentLayer->setLayout(SimpleColumnLayout::create()
                                           ->setMainAxisDirection(AxisDirection::TopToBottom)
                                           ->setMainAxisAlignment(MainAxisAlignment::Start)
@@ -86,12 +101,26 @@ bool NongList::init(std::vector<int> songIds, const CCSize& size, const std::opt
                                           ->setGap(s_padding / 2));
     m_list->setID("list");
 
-    this->addChildAtPosition(m_list, Anchor::Center, -m_list->getScaledContentSize() / 2);
+    // Offset downward to leave room for the search bar at the top
+    this->addChildAtPosition(m_list, Anchor::Center, CCPoint{0.0f, -(s_searchBarHeight / 2)});
 
     m_onListTypeChange(m_currentSong);
 
     this->build();
     return true;
+}
+
+bool NongList::matchesSearch(const std::string& name) const {
+    if (m_searchQuery.empty()) {
+        return true;
+    }
+
+    // Case-insensitive substring match
+    std::string haystack = name;
+    std::string needle = m_searchQuery;
+    std::transform(haystack.begin(), haystack.end(), haystack.begin(), ::tolower);
+    std::transform(needle.begin(), needle.end(), needle.begin(), ::tolower);
+    return haystack.find(needle) != std::string::npos;
 }
 
 void NongList::build() {
@@ -110,6 +139,9 @@ void NongList::build() {
     }
 
     if (!m_currentSong) {
+        // Multi-song view — no search bar needed
+        m_searchInput->setVisible(false);
+
         for (int id : m_songIds) {
             std::optional<Nongs*> nongs = NongManager::get().getNongs(id);
 
@@ -123,7 +155,9 @@ void NongList::build() {
                 SongCell::create(id, active->metadata(), itemSize, [this, id]() { this->onSelectSong(id); }));
         }
     } else {
-        // Single item
+        // Single item — show the search bar
+        m_searchInput->setVisible(true);
+
         int id = m_currentSong.value();
 
         std::optional<Nongs*> optNongs = NongManager::get().getNongs(id);
@@ -211,6 +245,10 @@ void NongList::build() {
         });
 
         for (Song* nong : allLocalNongs) {
+            // Skip nongs that don't match the current search query
+            if (!this->matchesSearch(nong->metadata()->name)) {
+                continue;
+            }
             this->addSongToList(nong, nongs);
         }
 
@@ -277,6 +315,10 @@ void NongList::build() {
                   });
 
         for (index::IndexSongMetadata* indexNong : allIndexNongs) {
+            // Skip index nongs that don't match the current search query
+            if (!this->matchesSearch(indexNong->name)) {
+                continue;
+            }
             this->addIndexSongToList(indexNong, nongs);
         }
     }
@@ -343,6 +385,12 @@ void NongList::scrollToTop() {
 void NongList::onBack(cocos2d::CCObject* target) {
     if (!m_currentSong.has_value() || m_songIds.size() < 2) {
         return;
+    }
+
+    // Clear search when going back to multi-song view
+    m_searchQuery = "";
+    if (m_searchInput) {
+        m_searchInput->setString("");
     }
 
     m_currentSong = std::nullopt;
