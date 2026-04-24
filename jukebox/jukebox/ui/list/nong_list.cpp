@@ -80,7 +80,7 @@ bool NongList::init(std::vector<int> songIds, const CCSize& size, const std::opt
     this->addChildAtPosition(menu, Anchor::Left, CCPoint{-10.0f, 0.0f});
 
     // Search bar — shown only in single-song view, hidden in multi-song view.
-    // It sits above the scroll list and shrinks the list height to fit.
+    // It sits above the scroll list; build() resizes/repositions the list when toggling visibility.
     m_searchInput = TextInput::create(size.width - s_padding * 2, "Search nongs...");
     m_searchInput->setID("search-input");
     m_searchInput->setScale(0.75f);
@@ -91,8 +91,8 @@ bool NongList::init(std::vector<int> songIds, const CCSize& size, const std::opt
     m_searchInput->setVisible(false);
     this->addChildAtPosition(m_searchInput, Anchor::Top, CCPoint{0.0f, -(s_searchBarHeight / 2 + s_padding / 2)});
 
-    // List height shrinks by s_searchBarHeight when the search bar is visible
-    m_list = ScrollLayer::create({size.width, size.height - s_padding - s_searchBarHeight});
+    // Full-height list; build() will shrink it when the search bar is visible
+    m_list = ScrollLayer::create({size.width, size.height - s_padding});
     m_list->m_contentLayer->setLayout(SimpleColumnLayout::create()
                                           ->setMainAxisDirection(AxisDirection::TopToBottom)
                                           ->setMainAxisAlignment(MainAxisAlignment::Start)
@@ -101,8 +101,7 @@ bool NongList::init(std::vector<int> songIds, const CCSize& size, const std::opt
                                           ->setGap(s_padding / 2));
     m_list->setID("list");
 
-    // Offset downward to leave room for the search bar at the top
-    this->addChildAtPosition(m_list, Anchor::Center, CCPoint{0.0f, -(s_searchBarHeight / 2)});
+    this->addChildAtPosition(m_list, Anchor::Center, -m_list->getScaledContentSize() / 2);
 
     m_onListTypeChange(m_currentSong);
 
@@ -139,8 +138,10 @@ void NongList::build() {
     }
 
     if (!m_currentSong) {
-        // Multi-song view — no search bar needed
+        // Multi-song view — hide search bar, restore list to full height
         m_searchInput->setVisible(false);
+        m_list->setContentSize({m_list->getContentSize().width, this->getContentSize().height - s_padding});
+        this->addChildAtPosition(m_list, Anchor::Center, -m_list->getScaledContentSize() / 2);
 
         for (int id : m_songIds) {
             std::optional<Nongs*> nongs = NongManager::get().getNongs(id);
@@ -155,8 +156,12 @@ void NongList::build() {
                 SongCell::create(id, active->metadata(), itemSize, [this, id]() { this->onSelectSong(id); }));
         }
     } else {
-        // Single item — show the search bar
+        // Single item — show the search bar and shrink the list to make room
         m_searchInput->setVisible(true);
+        float listHeight = this->getContentSize().height - s_padding - s_searchBarHeight;
+        m_list->setContentSize({m_list->getContentSize().width, listHeight});
+        // Push list down so it sits below the search bar
+        this->addChildAtPosition(m_list, Anchor::Center, CCPoint{0.0f, -(s_searchBarHeight / 2)} - m_list->getScaledContentSize() / 2);
 
         int id = m_currentSong.value();
 
